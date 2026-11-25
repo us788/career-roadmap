@@ -5,6 +5,7 @@
 - **매일 트래커**: https://us788.github.io/career-roadmap/
 - **로드맵 문서**: [docs/roadmap.pdf](docs/roadmap.pdf)
 - **마일스톤 체크리스트**: [MILESTONES.md](MILESTONES.md)
+- **학습 기록**: [LOG.md](LOG.md) (트래커에서 저장할 때 자동 생성)
 
 ## 주간 루틴
 
@@ -31,8 +32,20 @@
 - 할 일을 누르면 체크되고, 상단 막대에 오늘 채운 시간이 표시됩니다.
 - 주간 칸을 누르면 지난 날짜의 기록을 보거나 고칠 수 있습니다.
 - 설정에서 시험 기간 모드와 학습 단계(기초 / 실무)를 바꿀 수 있습니다. 바꾼 설정은 오늘과 이후 날짜에만 적용됩니다.
-- 기록은 각 기기의 브라우저에 저장됩니다. 기기를 옮길 때는 설정의 내보내기 / 불러오기를 씁니다.
+- **GitHub에 저장**을 누르면 `data/tracker.json`과 `LOG.md`가 커밋 하나로 저장소에 올라갑니다.
+- 트래커를 열 때 GitHub의 기록을 불러오므로 폰과 노트북에서 같은 기록을 씁니다. 같은 날짜를 두 기기에서 고쳤다면 더 나중에 고친 쪽이 남습니다.
+- GitHub에 연결하지 않은 기기에서는 설정의 내보내기 / 불러오기로 기록을 옮깁니다.
 - 폰에서는 브라우저의 "홈 화면에 추가"로 앱처럼 쓸 수 있습니다.
+
+## GitHub 연결 (기기마다 한 번)
+
+1. GitHub에서 **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**으로 갑니다.
+2. **Repository access**는 *Only select repositories*를 고르고 `career-roadmap`만 선택합니다.
+3. **Permissions → Repository permissions**에서 **Contents**를 *Read and write*로 바꿉니다. 다른 권한은 건드리지 않습니다.
+4. 만료 기간을 정하고 토큰을 만든 뒤 복사합니다.
+5. 트래커의 **설정 → GitHub 연결**에 토큰을 붙여 넣고 **연결**을 누릅니다.
+
+토큰은 그 기기의 브라우저에만 저장되고, 저장소나 내보내기 파일에는 들어가지 않습니다. 공용 PC에서는 연결하지 말고, 토큰이 만료되면 새로 만들어 다시 연결합니다.
 
 ## 구성
 
@@ -40,6 +53,9 @@
 .
 ├── index.html        # 매일 트래커 (의존성 없는 단일 파일)
 ├── MILESTONES.md     # 마일스톤 47개 체크리스트
+├── LOG.md            # 주간 학습 기록표 (자동 생성)
+├── data/
+│   └── tracker.json  # 트래커 원본 기록 (자동 생성)
 └── docs/
     └── roadmap.pdf   # 취업 준비 로드맵 문서
 ```
