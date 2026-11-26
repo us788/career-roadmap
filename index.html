@@ -70,7 +70,25 @@ h2 { font-size: 13px; font-weight: 700; color: var(--muted); margin: 26px 0 8px;
 .task-note { color: var(--muted); font-size: 13.5px; margin-top: 1px; }
 .task[aria-checked="true"] .task-title { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1.5px; }
 .task-min { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.empty { padding: 14px 16px; color: var(--muted); font-size: 14px; }
+
+/* 투두 */
+.todo { display: flex; align-items: center; border-top: 1px solid var(--line); }
+.todo:first-child { border-top: 0; }
+.todo .task { border-top: 0; flex: 1; min-width: 0; }
+.todo .task-title { font-weight: 600; overflow-wrap: anywhere; }
+.del { flex: 0 0 40px; height: 40px; margin-right: 8px; border: 0; background: none; color: var(--muted); border-radius: 10px; cursor: pointer; display: grid; place-items: center; }
+.del svg { width: 16px; height: 16px; }
+.del:hover { background: var(--bg); color: var(--ink); }
+.add { display: flex; align-items: center; gap: 14px; margin: 0; padding: 9px 10px 9px 16px; border-top: 1px solid var(--line); }
+.todos:empty + .add { border-top: 0; }
+.plus { flex: 0 0 26px; height: 26px; border-radius: 50%; border: 2px dashed var(--line); display: grid; place-items: center; color: var(--muted); transition: border-color .2s ease, color .2s ease; }
+.plus svg { width: 12px; height: 12px; }
+.add:focus-within .plus { border-color: var(--navy); color: var(--navy); }
+.add input { flex: 1; min-width: 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: 16px; padding: 6px 0; }
+.add input:focus { outline: none; }
+.add input::placeholder { color: var(--muted); }
+.add-btn { flex: 0 0 auto; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 7px 12px; font-size: 14px; cursor: pointer; }
+.add-btn:disabled { opacity: .45; cursor: default; }
 
 textarea { width: 100%; min-height: 72px; resize: vertical; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); padding: 12px 14px; font: inherit; font-size: 15px; }
 textarea::placeholder { color: var(--muted); }
@@ -156,6 +174,16 @@ footer a { color: var(--navy); text-decoration: none; font-weight: 600; }
   <h2>생활</h2>
   <div class="list" id="life" role="group" aria-label="생활 할 일"></div>
 
+  <h2 id="todoLabel">오늘의 투두</h2>
+  <div class="list">
+    <div class="todos" id="todos" role="group" aria-labelledby="todoLabel"></div>
+    <form class="add" id="todoForm" autocomplete="off">
+      <span class="plus" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 1.5v9M1.5 6h9"/></svg></span>
+      <input id="todoInput" maxlength="200" placeholder="오늘 할 일 추가" aria-label="투두 추가">
+      <button type="submit" class="add-btn" id="todoAdd" disabled>추가</button>
+    </form>
+  </div>
+
   <h2><label for="memo">오늘 한 것</label></h2>
   <textarea id="memo" placeholder="예: 스프링 핵심 원리 섹션 3, 프로그래머스 2문제, TCP 3-way handshake 정리"></textarea>
 
@@ -231,7 +259,6 @@ footer a { color: var(--navy); text-decoration: none; font-weight: 600; }
   const KEY = "career-roadmap:v1";        // 학습 기록 (GitHub에 올라감)
   const GH_KEY = "career-roadmap:github"; // 연결 정보와 토큰 (이 기기에만 남음)
   const DAYS = ["일", "월", "화", "수", "목", "금", "토"];
-  const WORKOUT_DAYS = [2, 4, 5, 6];       // 화 목 금 토
   const PROJECT_DAYS = [1, 2, 3, 4, 5];    // 월~금
   const DATA_PATH = "data/tracker.json";
   const LOG_PATH = "LOG.md";
@@ -301,14 +328,16 @@ footer a { color: var(--navy); text-decoration: none; font-weight: 600; }
       road.push({ id: "cs", title: "CS", note: "질문 1~2개 1분 답변 후 정리", min: 30, short: "CS" });
       road.push({ id: "opic", title: "OPIc", note: "답변 1개 녹음하고 다시 듣기", min: 15, short: "OPIc" });
     }
-    if (WORKOUT_DAYS.includes(wd)) life.push({ id: "workout", title: "운동", note: "이동 포함 1시간 30분", min: 60, short: "운동" });
+    life.push({ id: "workout", title: "운동", note: "이동 포함 1시간 30분", min: 60, short: "운동" });
     if (PROJECT_DAYS.includes(wd)) life.push({ id: "project", title: "학교 프로젝트", note: "", min: 60, short: "프로젝트" });
     return { road, life, theme: wd === 0 ? "휴식과 주간 회고" : (mode.exam ? "시험 기간" : THEMES[mode.phase][wd]), exam: wd !== 0 && mode.exam };
   }
   function rec(k) {
-    if (!state.days[k]) state.days[k] = { mode: { exam: state.settings.exam, phase: state.settings.phase }, done: {}, memo: "", updated: 0 };
+    if (!state.days[k]) state.days[k] = { mode: { exam: state.settings.exam, phase: state.settings.phase }, done: {}, memo: "", todos: [], updated: 0 };
     return state.days[k];
   }
+  // 직접 추가한 투두 (로드맵 시간과 연속 달성에는 들어가지 않음)
+  const todosOf = r => (r && Array.isArray(r.todos) ? r.todos : []);
   function progress(k) {
     const p = plan(k), done = (state.days[k] && state.days[k].done) || {};
     const total = p.road.reduce((s, t) => s + t.min, 0);
@@ -339,6 +368,33 @@ footer a { color: var(--navy); text-decoration: none; font-weight: 600; }
     return b;
   }
 
+  const X_SVG = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>';
+  function editTodos(fn) {
+    const r = rec(selKey);
+    const list = todosOf(r).slice();
+    r.todos = fn(list) || list;
+    r.updated = Date.now();
+    changed(); syncOverride = null; render();
+  }
+  function todoRow(t) {
+    const row = document.createElement("div");
+    row.className = "todo";
+    const b = document.createElement("button");
+    b.className = "task"; b.type = "button";
+    b.setAttribute("role", "checkbox");
+    b.setAttribute("aria-checked", t.done ? "true" : "false");
+    b.innerHTML = '<span class="check">' + CHECK_SVG + '</span><span class="task-body"><div class="task-title"></div></span>';
+    b.querySelector(".task-title").textContent = t.text;
+    b.addEventListener("click", () => editTodos(list => list.map(x => x.id === t.id ? Object.assign({}, x, { done: !x.done }) : x)));
+    const del = document.createElement("button");
+    del.className = "del"; del.type = "button";
+    del.setAttribute("aria-label", t.text + " 삭제");
+    del.innerHTML = X_SVG;
+    del.addEventListener("click", () => editTodos(list => list.filter(x => x.id !== t.id)));
+    row.append(b, del);
+    return row;
+  }
+
   function render() {
     const d = fromKey(selKey), p = plan(selKey), r = state.days[selKey], done = (r && r.done) || {};
     const isToday = selKey === todayKey();
@@ -366,8 +422,12 @@ footer a { color: var(--navy); text-decoration: none; font-weight: 600; }
     const road = $("roadmap"); road.innerHTML = "";
     p.road.forEach(t => road.appendChild(taskRow(t, !!done[t.id])));
     const life = $("life"); life.innerHTML = "";
-    if (p.life.length) p.life.forEach(t => life.appendChild(taskRow(t, !!done[t.id])));
-    else life.innerHTML = '<div class="empty">이날은 운동과 학교 프로젝트가 없습니다.</div>';
+    p.life.forEach(t => life.appendChild(taskRow(t, !!done[t.id])));
+
+    $("todoLabel").textContent = isToday ? "오늘의 투두" : "이날의 투두";
+    const todos = $("todos"); todos.innerHTML = "";
+    todosOf(r).forEach(t => todos.appendChild(todoRow(t)));
+    $("todoInput").placeholder = isToday ? "오늘 할 일 추가" : "이날 할 일 추가";
 
     const memo = $("memo");
     if (document.activeElement !== memo) memo.value = (r && r.memo) || "";
@@ -476,11 +536,12 @@ footer a { color: var(--navy); text-decoration: none; font-weight: 600; }
   }
   const stable = o => JSON.stringify(o, null, 2) + "\n";
 
-  function cell(t) { return String(t || "").replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>").trim(); }
+  // 표 칸용: 파이프는 이스케이프, <는 &lt;로 바꿔 List<String> 같은 글이 HTML 태그로 사라지지 않게 함
+  function cell(t) { return String(t || "").replace(/</g, "&lt;").replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>").trim(); }
   function buildLog() {
     const active = Object.keys(state.days).filter(k => {
       const r = state.days[k];
-      return (r.memo && r.memo.trim()) || Object.values(r.done || {}).some(Boolean);
+      return (r.memo && r.memo.trim()) || Object.values(r.done || {}).some(Boolean) || todosOf(r).length > 0;
     }).sort().reverse();
     const lines = ["# 학습 기록", "", "트래커의 \"GitHub에 저장\" 버튼으로 자동 생성되는 파일입니다. 직접 고치면 다음 저장 때 덮어씁니다.", ""];
     if (!active.length) { lines.push("아직 기록이 없습니다.", ""); return lines.join("\n"); }
@@ -489,11 +550,12 @@ footer a { color: var(--navy); text-decoration: none; font-weight: 600; }
     Object.keys(weeks).sort().reverse().forEach(w => {
       const ks = weeks[w];
       const total = ks.reduce((s, k) => s + progress(k).got, 0);
-      lines.push("## " + w + " 주 (로드맵 " + total + "분)", "", "| 날짜 | 주제 | 로드맵 | 완료 | 한 것 |", "|---|---|---|---|---|");
+      lines.push("## " + w + " 주 (로드맵 " + total + "분)", "", "| 날짜 | 주제 | 로드맵 | 완료 | 투두 | 한 것 |", "|---|---|---|---|---|---|");
       ks.forEach(k => {
         const d = fromKey(k), p = plan(k), r = state.days[k], pr = progress(k);
         const doneNames = p.road.concat(p.life).filter(t => r.done && r.done[t.id]).map(t => t.short).join(", ");
-        lines.push("| " + (d.getMonth() + 1) + "/" + d.getDate() + " (" + DAYS[d.getDay()] + ") | " + cell(p.theme) + " | " + pr.got + " / " + pr.total + "분 | " + cell(doneNames) + " | " + cell(r.memo) + " |");
+        const todoList = todosOf(r).map(t => (t.done ? "✓ " : "☐ ") + cell(t.text)).join("<br>");
+        lines.push("| " + (d.getMonth() + 1) + "/" + d.getDate() + " (" + DAYS[d.getDay()] + ") | " + cell(p.theme) + " | " + pr.got + " / " + pr.total + "분 | " + cell(doneNames) + " | " + todoList + " | " + cell(r.memo) + " |");
       });
       lines.push("");
     });
@@ -570,6 +632,18 @@ footer a { color: var(--navy); text-decoration: none; font-weight: 600; }
     const v = e.target.value, k = selKey;
     clearTimeout(memoTimer);
     memoTimer = setTimeout(() => { const r = rec(k); r.memo = v; r.updated = Date.now(); changed(); syncOverride = null; renderSync(); }, 300);
+  });
+
+  // 투두 추가: form submit을 쓰면 한글 입력 중 Enter를 눌러도 한 번만 추가됨
+  const syncAddBtn = () => { $("todoAdd").disabled = !$("todoInput").value.trim(); };
+  $("todoInput").addEventListener("input", syncAddBtn);
+  $("todoForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const input = $("todoInput"), text = input.value.trim();
+    if (!text) return;
+    const id = "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    editTodos(list => list.concat({ id, text, done: false }));
+    input.value = ""; syncAddBtn();
   });
 
   // 설정 변경은 오늘과 이후 날짜에 적용 (지난 기록은 그대로)
